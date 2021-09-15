@@ -27,8 +27,8 @@ function conv_greater_benchmark(g1::TimeOrderedGF, g2::TimeOrderedGF, ts)
     g = zero(g1.L)
     for i in 1:size(g,1)
         for j in 1:size(g,2)
-            g[i,j] += integrate(ts, g1.R[i, :] .* g2.G[:, j])
-            g[i,j] += integrate(ts, g1.G[i, :] .* g2.A[:, j])
+            g[i,j] += integrate(ts, retarded(g1)[i, :] .* greater(g2)[:, j])
+            g[i,j] += integrate(ts, greater(g1)[i, :] .* advanced(g2)[:, j])
         end
     end
     g
