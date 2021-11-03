@@ -1,12 +1,14 @@
 using LangrethsRules
 using Test
 
+N = 100
+
 # Suppose a non-equidistant time-grid
-ts = sort(10rand(10));
+ts = sort(N*rand(N));
 
 # And 2 time-ordered GFs defined on that grid
-g1 = TimeOrderedGF(rand(10,10), rand(10,10), ts)
-g2 = TimeOrderedGF(rand(10,10), rand(10,10), ts)
+g1 = TimeOrderedGF(rand(N,N), rand(N,N), ts)
+g2 = TimeOrderedGF(rand(N,N), rand(N,N), ts)
 
 # Obtaining convolutions is simple (and fast)
 result1 = greater(g1 ⋆ g2)
@@ -35,3 +37,4 @@ function conv_greater_benchmark(g1::TimeOrderedGF, g2::TimeOrderedGF, ts)
 end
 
 @test conv_greater_benchmark(g1, g2, ts) ≈ greater(g1 ⋆ g2)
+@test retarded((g1 ⋆ g2) ⋆ g1) ≈ retarded(g1 ⋆ (g2 ⋆ g1))

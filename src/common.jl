@@ -7,7 +7,10 @@ abstract type AbstractGF end
 struct TimeOrderedGF <: AbstractGF
     L   # Lesser
     G   # Greater
+    R   # Retarded
     ts  # time-grid
+    
+    TimeOrderedGF(L, G, ts) = new(L, G, LowerTriangular(G - L), ts)
 end
 
 """
@@ -26,6 +29,7 @@ function conv(A::TimeOrderedGF, B::TimeOrderedGF)
     return TimeOrderedConvolution(A, B, dts)
 end
 conv(A::TimeOrderedConvolution, B::AbstractGF) = TimeOrderedConvolution(A, B, A.dts)
+conv(A::AbstractGF, B::TimeOrderedConvolution) = TimeOrderedConvolution(A, B, B.dts)
 const ⋆ = conv # left-associative operator
 
 
