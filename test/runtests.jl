@@ -1,40 +1,63 @@
 using LangrethsRules
 using Test
 
+function integrate(x::AbstractVector, y::AbstractVector)
+    if isone(length(y))
+        return zero(first(y))
+    end
+    @inbounds retval = (x[2] - x[1]) * (y[1] + y[2])
+    @inbounds @fastmath @simd for i in 2:(length(y)-1)
+        retval += (x[i+1] - x[i]) * (y[i] + y[i+1])
+    end
+    return 1 // 2 * retval
+end
+
+function compute(A, B, ts)
+    l = zero(lesser(A))
+    for i in 1:size(l, 1)
+        for j in 1:i
+            l[i,j] += integrate(ts, greater(A)[i, 1:i] .* lesser(B)[1:i, j])
+            l[i,j] -= integrate(ts, lesser(A)[i, 1:j] .* greater(B)[1:j, j])
+            l[i,j] -= integrate(ts[j:i], lesser(A)[i, j:i] .* lesser(B)[j:i, j])
+
+            l[j,i] = -conj(l[i,j])
+        end
+        l[i,i] = eltype(l) <: Real ? 0.0 : im * imag(l[i,i])
+    end
+    
+    g = zero(greater(A))
+    for i in 1:size(g, 1)
+        for j in 1:i
+            g[i,j] -= integrate(ts, lesser(A)[i, 1:i] .* greater(B)[1:i, j])
+            g[i,j] += integrate(ts, greater(A)[i, 1:j] .* lesser(B)[1:j, j])
+            g[i,j] += integrate(ts[j:i], greater(A)[i, j:i] .* greater(B)[j:i, j])
+
+            g[j,i] = -conj(g[i,j])
+        end
+        g[i,i] = eltype(g) <: Real ? 0.0 : im * imag(g[i,i])
+    end
+    
+    TimeOrderedGF(l, g, ts)
+end
+
 N = 100
 
 # Suppose a non-equidistant time-grid
 ts = sort(N*rand(N));
 
 # And 2 time-ordered GFs defined on that grid
-g1 = TimeOrderedGF(rand(N,N), rand(N,N), ts)
-g2 = TimeOrderedGF(rand(N,N), rand(N,N), ts)
-
-# Obtaining convolutions is simple (and fast)
-result1 = greater(g1 ⋆ g2)
-result2 = lesser(g1 ⋆ g2 ⋆ g1) # can also chain convolutions
-
-function integrate(x::AbstractVector, y::AbstractVector)
-    if isone(length(x))
-        return zero(first(y))
-    end
-    @inbounds retval = (x[2] - x[1]) * (y[1] + y[2])
-    @inbounds @fastmath @simd for i in 2:(length(y) - 1)
-        retval += (x[i+1] - x[i]) * (y[i] + y[i+1])
-    end
-    return 1//2 * retval
+a = let
+    x = rand(ComplexF64,N,N)
+    y = rand(ComplexF64,N,N)
+    TimeOrderedGF(x - x', y - y', ts) # Skew-symmetric L and G components
+end
+b = let
+    x = rand(ComplexF64,N,N)
+    y = rand(ComplexF64,N,N)
+    TimeOrderedGF(x - x', y - y', ts) # Skew-symmetric L and G components
 end
 
-function conv_greater_benchmark(g1::TimeOrderedGF, g2::TimeOrderedGF, ts)
-    g = zero(g1.L)
-    for i in 1:size(g,1)
-        for j in 1:size(g,2)
-            g[i,j] += integrate(ts, retarded(g1)[i, :] .* greater(g2)[:, j])
-            g[i,j] += integrate(ts, greater(g1)[i, :] .* advanced(g2)[:, j])
-        end
-    end
-    g
-end
-
-@test conv_greater_benchmark(g1, g2, ts) ≈ greater(g1 ⋆ g2)
-@test retarded((g1 ⋆ g2) ⋆ g1) ≈ retarded(g1 ⋆ (g2 ⋆ g1))
+@test greater(a ⋆ b) ≈ greater(compute(a, b, ts)) atol=1e-8 rtol=1e-8
+@test lesser(a ⋆ b) ≈ lesser(compute(a, b, ts)) atol=1e-8 rtol=1e-8
+@test retarded(a ⋆ b) ≈ adjoint(advanced(a ⋆ b)) atol=1e-8 rtol=1e-8
+# @test retarded(a ⋆ b ⋆ a) ≈ retarded(a ⋆ (b ⋆ a))

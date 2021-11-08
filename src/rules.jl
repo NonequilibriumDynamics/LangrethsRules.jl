@@ -3,7 +3,5 @@ lesser(g::TimeOrderedGF) = g.L
 retarded(g::TimeOrderedGF) = g.R
 advanced(g::TimeOrderedGF) = adjoint(retarded(g))
 
-greater(g::TimeOrderedConvolution) = greater(g.A) * g.dts * advanced(g.B) + retarded(g.A) * g.dts * greater(g.B)
-lesser(g::TimeOrderedConvolution) = lesser(g.A) * g.dts * advanced(g.B) + retarded(g.A) * g.dts * lesser(g.B)
-retarded(g::TimeOrderedConvolution) = retarded(g.A) * g.dts * retarded(g.B)
-advanced(g::TimeOrderedConvolution) = advanced(g.A) * g.dts * advanced(g.B)
+greater(g::TimeOrderedConvolution) = (retarded(g.A) * g.dts - Diagonal(retarded(g.A)) * g.dts′) * greater(g.B) + greater(g.A) * (g.dts * advanced(g.B) - g.dts′ * Diagonal(advanced(g.B))) |> skew_hermitify!
+lesser(g::TimeOrderedConvolution) = (retarded(g.A) * g.dts - Diagonal(retarded(g.A)) * g.dts′) * lesser(g.B) + lesser(g.A) * (g.dts * advanced(g.B) - g.dts′ * Diagonal(advanced(g.B))) |> skew_hermitify!
