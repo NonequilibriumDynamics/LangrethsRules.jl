@@ -22,16 +22,14 @@ struct TimeOrderedConvolution <: AbstractGF
     A::AbstractGF # Left GF
     B::AbstractGF # Right GF
     dts::AbstractMatrix # Trapezoidal rule is achieved by a multiplication with this matrix
-    dts′::AbstractMatrix # And a correction has to be applied (yay theta functions)
 end
 
 """
 """
-function conv(A::TimeOrderedGF, B::TimeOrderedGF)
-    dts_ = B.ts[2:end] - B.ts[1:end-1]
-    dts = 0.5 * Diagonal([dts_; 0.0] + [0.0; dts_])
-    dts′ = 0.5 * Diagonal([dts_; 0.0])
-    c = TimeOrderedConvolution(A, B, dts, dts′)
+function conv(A::TimeOrderedGF, B::TimeOrderedGF; 
+    dts = reduce(hcat, ([calculate_weights(A.ts[1:i], ones(Int64, i-1)); zeros(length(A.ts)-i)] for i in eachindex(A.ts)))
+    )
+    c = TimeOrderedConvolution(A, B, dts)
     return TimeOrderedGF(lesser(c), greater(c), B.ts) # no need for lazy `TimeOrderedConvolution`
 end
 const ⋆ = conv # left-associative operator

@@ -57,7 +57,7 @@ b = let
     TimeOrderedGF(x - x', y - y', ts) # Skew-symmetric L and G components
 end
 
-@test greater(a ⋆ b) ≈ greater(compute(a, b, ts)) atol=1e-8 rtol=1e-8
-@test lesser(a ⋆ b) ≈ lesser(compute(a, b, ts)) atol=1e-8 rtol=1e-8
-@test retarded(a ⋆ b) ≈ adjoint(advanced(a ⋆ b)) atol=1e-8 rtol=1e-8
+@test greater(a ⋆ b) ≈ greater(compute(a, b, ts))
+@test lesser(a ⋆ b) ≈ lesser(compute(a, b, ts))
+@test retarded(a ⋆ b) ≈ adjoint(advanced(a ⋆ b))
 # @test retarded(a ⋆ b ⋆ a) ≈ retarded(a ⋆ (b ⋆ a))

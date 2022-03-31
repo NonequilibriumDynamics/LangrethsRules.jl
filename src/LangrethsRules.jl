@@ -1,6 +1,7 @@
 module LangrethsRules
 
 using LinearAlgebra
+import KadanoffBaym: calculate_weights
 
 export TimeOrderedGF, TimeOrderedConvolution, ⋆
 export greater, lesser, advanced, retarded
@@ -13,11 +14,6 @@ function skew_hermitify!(x)
 
         x[i,i] = eltype(x) <: Real ? 0.0 : im * imag(x[i,i])
     end
-    x
-end
-
-function half_diag!(x)
-    # x[diagind(x)] .*= 0.5
     x
 end
 
