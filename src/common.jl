@@ -1,35 +1,38 @@
-"""
-"""
-abstract type AbstractGF end
+abstract type AbstractGreenFunction end
 
 """
+    A time-ordered Green function.
+
+    This framework arises because the Heaviside functions that work very nicely 
+    on paper are different beasts when the Green function is discretized in a matrix form.
 """
-struct TimeOrderedGF <: AbstractGF
+struct TimeOrderedGreenFunction <: AbstractGreenFunction
     L   # Lesser
     G   # Greater
-    R   # Retarded
-    ts  # time-grid
-    
-    TimeOrderedGF(L, G, ts) = new(L, G, LowerTriangular(G - L), ts)
+    R   # Retarded (this is not the true retarded function)
+    A   # Advanced (this is not the true advanced function)
+
+    hs
+
+    function TimeOrderedGreenFunction(L, G, hs)
+        A = UpperTriangular(G - L) .* hs
+        new(L, G, adjoint(A), A, hs)
+    end
 end
 
-Base.:*(a::Number, g::TimeOrderedGF) = TimeOrderedGF(a * lesser(g), a * greater(g), g.ts)
-Base.:+(g1::TimeOrderedGF, g2::TimeOrderedGF) = TimeOrderedGF(lesser(g1) + lesser(g2), greater(g1) + greater(g2), g1.ts)
+struct TimeOrderedConvolution{T<:AbstractGreenFunction, V<:AbstractGreenFunction} <: AbstractGreenFunction
+    A::T
+    B::V
 
-"""
-"""
-struct TimeOrderedConvolution <: AbstractGF
-    A::AbstractGF # Left GF
-    B::AbstractGF # Right GF
-    dts::AbstractMatrix # Trapezoidal rule is achieved by a multiplication with this matrix
+    hs
 end
 
-"""
-"""
-function conv(A::TimeOrderedGF, B::TimeOrderedGF; 
-    dts = reduce(hcat, ([calculate_weights(A.ts[1:i], ones(Int64, i-1)); zeros(length(A.ts)-i)] for i in eachindex(A.ts)))
-    )
-    c = TimeOrderedConvolution(A, B, dts)
-    return TimeOrderedGF(lesser(c), greater(c), B.ts) # no need for lazy `TimeOrderedConvolution`
+function Base.:+(a::AbstractGreenFunction, b::AbstractGreenFunction)
+    @assert a.hs === b.hs
+    TimeOrderedGreenFunction(lesser(a) + lesser(b), greater(a) + greater(b), a.hs)
 end
-const ⋆ = conv # left-associative operator
+
+function Base.:*(a::AbstractGreenFunction, b::AbstractGreenFunction)
+    @assert a.hs === b.hs
+    TimeOrderedConvolution(a, b, a.hs)
+end
