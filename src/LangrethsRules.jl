@@ -1,9 +1,10 @@
 module LangrethsRules
 
+using Base: tail
 using LinearAlgebra
 
 export TimeOrderedGreenFunction, TimeOrderedConvolution
-export greater, lesser
+export greater, lesser, retarded, advanced
 
 include("common.jl")
 include("rules.jl")

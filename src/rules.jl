@@ -1,43 +1,43 @@
 lesser(x::TimeOrderedGreenFunction) = x.L
-
-function lesser(x::TimeOrderedConvolution{TimeOrderedGreenFunction, TimeOrderedGreenFunction})
-    a, b = x.A, x.B
-    a.R * b.L + a.L * b.A
+function lesser(x::TimeOrderedConvolution{2})
+    (LowerTriangular(x.hs) .* retarded(x.gs[1])) * lesser(x.gs[2]) + lesser(x.gs[1]) * (advanced(x.gs[2]) .* UpperTriangular(x.hs))
+end
+function lesser(x::TimeOrderedConvolution{3})
+    r1 = LowerTriangular(x.hs) .* retarded(x.gs[1])
+    a3 = advanced(x.gs[3]) .* UpperTriangular(x.hs)
+    l = lesser(x.gs[1]) * (advanced(x.gs[2]) .* UpperTriangular(x.hs)) * a3
+    l - l' + r1 * lesser(x.gs[2]) * a3
 end
 
-function lesser(x::TimeOrderedConvolution{TimeOrderedGreenFunction, TimeOrderedConvolution{TimeOrderedGreenFunction,TimeOrderedGreenFunction}})
-    a, b, c = x.A, x.B.A, x.B.B
-    lesser3(a, b, c)
-end
-
-function lesser(x::TimeOrderedConvolution{TimeOrderedConvolution{TimeOrderedGreenFunction,TimeOrderedGreenFunction}, TimeOrderedGreenFunction})
-    a, b, c = x.A.A, x.A.B, x.B
-    lesser3(a, b, c)
-end
-
-function lesser3(a, b, c)
-    x = a.L * b.A * c.A
-    x - x' + a.R * b.L * c.A
-end
-
+# function greater(x::TimeOrderedConvolution{2})
+#     (LowerTriangular(x.hs) .* retarded(x.gs[1])) * greater(x.gs[2]) + greater(x.gs[1]) * (advanced(x.gs[2]) .* UpperTriangular(x.hs))
+# end
+# function greater(x::TimeOrderedConvolution{3})
+#     r1 = LowerTriangular(x.hs) .* retarded(x.gs[1])
+#     a3 = advanced(x.gs[3]) .* UpperTriangular(x.hs)
+#     g = greater(x.gs[1]) * (advanced(x.gs[2]) .* UpperTriangular(x.hs)) * a3
+#     g - g' + r1 * greater(x.gs[2]) * a3
+# end
 greater(x::TimeOrderedGreenFunction) = x.G
+greater(x::TimeOrderedConvolution{1}) = greater(first(x.gs))
+function greater(x::TimeOrderedConvolution)
+    (LowerTriangular(x.hs) .* retarded(first(x.gs))) * greater(TimeOrderedConvolution(tail(x.gs), x.hs)) + greater(first(x.gs)) * (advanced(TimeOrderedConvolution(tail(x.gs), x.hs)) .* UpperTriangular(x.hs))
+end
+# function greater(x::TimeOrderedConvolution{3})
+#     r1 = LowerTriangular(x.hs) .* retarded(x.gs[1])
+#     a3 = advanced(x.gs[3]) .* UpperTriangular(x.hs)
+#     g = greater(x.gs[1]) * (advanced(x.gs[2]) .* UpperTriangular(x.hs)) * a3
+#     g - g' + r1 * greater(x.gs[2]) * a3
+# end
 
-function greater(x::TimeOrderedConvolution{TimeOrderedGreenFunction, TimeOrderedGreenFunction})
-    a, b = x.A, x.B
-    a.R * b.G + a.G * b.A
+retarded(x::TimeOrderedGreenFunction) = LowerTriangular(lesser(x) - greater(x))
+retarded(x::TimeOrderedConvolution{1}) = retarded(first(x.gs))
+function retarded(x::TimeOrderedConvolution)
+    (LowerTriangular(x.hs) .* retarded(first(x.gs))) * retarded(TimeOrderedConvolution(tail(x.gs), x.hs))
 end
 
-function greater(x::TimeOrderedConvolution{TimeOrderedGreenFunction, TimeOrderedConvolution{TimeOrderedGreenFunction,TimeOrderedGreenFunction}})
-    a, b, c = x.A, x.B.A, x.B.B
-    greater3(a, b, c)
-end
-
-function greater(x::TimeOrderedConvolution{TimeOrderedConvolution{TimeOrderedGreenFunction,TimeOrderedGreenFunction}, TimeOrderedGreenFunction})
-    a, b, c = x.A.A, x.A.B, x.B
-    greater3(a, b, c)
-end
-
-function greater3(a, b, c)
-    x = a.G * b.A * c.A
-    x - x' + a.R * b.G * c.A
+advanced(x::TimeOrderedGreenFunction) = UpperTriangular(greater(x) - lesser(x))
+advanced(x::TimeOrderedConvolution{1}) = advanced(first(x.gs))
+function advanced(x::TimeOrderedConvolution)
+    (advanced(first(x.gs)) .* UpperTriangular(x.hs)) * advanced(TimeOrderedConvolution(tail(x.gs), x.hs))
 end
