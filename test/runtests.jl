@@ -37,7 +37,7 @@ function compute(A, B, ts)
         g[i,i] = eltype(g) <: Real ? 0.0 : im * imag(g[i,i])
     end
     
-    TimeOrderedGF(l, g, ts)
+    TimeOrderedGreenFunction(l, g)
 end
 
 N = 100
@@ -49,15 +49,16 @@ ts = sort(N*rand(N));
 a = let
     x = rand(ComplexF64,N,N)
     y = rand(ComplexF64,N,N)
-    TimeOrderedGF(x - x', y - y', ts) # Skew-symmetric L and G components
+    TimeOrderedGreenFunction(x - x', y - y') # Skew-symmetric L and G components
 end
 b = let
     x = rand(ComplexF64,N,N)
     y = rand(ComplexF64,N,N)
-    TimeOrderedGF(x - x', y - y', ts) # Skew-symmetric L and G components
+    TimeOrderedGreenFunction(x - x', y - y') # Skew-symmetric L and G components
 end
 
-@test greater(a ⋆ b) ≈ greater(compute(a, b, ts))
-@test lesser(a ⋆ b) ≈ lesser(compute(a, b, ts))
-@test retarded(a ⋆ b) ≈ adjoint(advanced(a ⋆ b))
-# @test retarded(a ⋆ b ⋆ a) ≈ retarded(a ⋆ (b ⋆ a))
+dts = reduce(hcat, ([KadanoffBaym.calculate_weights(ts[1:i], ones(Int64, i-1)); zeros(length(ts)-i)] for i in eachindex(ts)))
+
+@test greater(TimeOrderedConvolution((a, b), dts)) ≈ greater(compute(a, b, ts))
+@test lesser(TimeOrderedConvolution((a, b), dts)) ≈ lesser(compute(a, b, ts))
+@test retarded(TimeOrderedConvolution((a, b), dts)) ≈ adjoint(advanced(a * b))
