@@ -57,8 +57,12 @@ b = let
     TimeOrderedGreenFunction(x - x', y - y') # Skew-symmetric L and G components
 end
 
-dts = reduce(hcat, ([KadanoffBaym.calculate_weights(ts[1:i], ones(Int64, i-1)); zeros(length(ts)-i)] for i in eachindex(ts)))
+dts = reduce(hcat, ([KadanoffBaym.calculate_weights(ts[1:i], ones(Int64, i-1), 1e-8, 1e-3); zeros(length(ts)-i)] for i in eachindex(ts)))
 
-@test greater(TimeOrderedConvolution((a, b), dts)) ≈ greater(compute(a, b, ts))
-@test lesser(TimeOrderedConvolution((a, b), dts)) ≈ lesser(compute(a, b, ts))
-@test retarded(TimeOrderedConvolution((a, b), dts)) ≈ adjoint(advanced(a * b))
+⋆(a, b) = conv(a, b, dts)
+
+@test greater(a ⋆ b) ≈ greater(compute(a, b, ts))
+@test lesser(a ⋆ b) ≈ lesser(compute(a, b, ts))
+@test retarded(a ⋆ b) ≈ retarded(compute(a, b, ts))
+@test greater(a ⋆ b ⋆ a) ≈ greater(compute(compute(a, b, ts), a, ts))
+@test retarded(a ⋆ b ⋆ a) ≈ retarded(compute(compute(a, b, ts), a, ts))
